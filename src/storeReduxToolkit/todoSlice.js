@@ -11,7 +11,40 @@ export const fetchTodoThunk = createAsyncThunk(
 			const data = await response.json();
 			dispatch(fetchTodo(data));
 		} catch (error) {
-			rejectWithValue(error.message);
+			return rejectWithValue(error.message);
+		}
+	}
+);
+export const addTodoThunk = createAsyncThunk(
+	'todo/addTodoThunk',
+	async function (title, { rejectWithValue, dispatch }) {
+		try {
+			const response = await fetch(`${url}/todos`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					title,
+				}),
+			});
+			if (!response.ok)
+				throw new Error(`Error while adding with status: ${response.status}`);
+			const data = await response.json();
+			dispatch(addTodo(data));
+		} catch (error) {
+			return rejectWithValue(error.message);
+		}
+	}
+);
+export const removeTodoThunk = createAsyncThunk(
+	'todo/removeTodoThunk',
+	async function (id, { rejectWithValue, dispatch }) {
+		try {
+			const response = await fetch(`${url}/todos/${id}`, { method: 'DELETE' });
+			if (!response.ok) throw new Error();
+		} catch (error) {
+			return rejectWithValue(error.message);
 		}
 	}
 );
@@ -21,21 +54,64 @@ export const todoSlice = createSlice({
 	initialState: {
 		todos: [],
 		nextId: 1,
+		fetchStatus: {
+			status: 'ok',
+			error: null,
+		},
+		addStatus: {
+			status: 'ok',
+			error: null,
+		},
 	},
 	reducers: {
 		fetchTodo(state, action) {
 			state.todos = action.payload;
 		},
 		addTodo(state, action) {
-			console.log(action.payload.title);
-			state.todos.push({
-				id: state.nextId,
-				title: action.payload.title,
-			});
-			state.nextId++;
+			console.log(action.payload);
+			state.todos.push(action.payload);
 		},
 		removeTodo(state, action) {
 			state.todos = state.todos.filter(todo => todo.id !== action.payload.id);
+		},
+	},
+	extraReducers: {
+		[fetchTodoThunk.pending]: state => {
+			state.fetchStatus = {
+				status: 'loading',
+				error: null,
+			};
+		},
+		[fetchTodoThunk.fulfilled]: state => {
+			state.fetchStatus = {
+				status: 'ok',
+				error: null,
+			};
+		},
+		[fetchTodoThunk.rejected]: (state, action) => {
+			state.fetchStatus = {
+				status: 'error',
+				error: action.payload,
+			};
+		},
+
+		[addTodoThunk.pending]: state => {
+			state.addStatus = {
+				status: 'loading',
+				error: null,
+			};
+		},
+		[addTodoThunk.fulfilled]: state => {
+			state.addStatus = {
+				status: 'ok',
+				error: null,
+			};
+		},
+		[addTodoThunk.rejected]: (state, action) => {
+			state.addStatus = {
+				status: 'error',
+				error: action.payload,
+			};
 		},
 	},
 });
