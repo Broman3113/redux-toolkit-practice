@@ -1,10 +1,10 @@
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import {createAsyncThunk, createSlice} from '@reduxjs/toolkit';
 
 const url = 'http://localhost:3001';
 
 export const fetchTodoThunk = createAsyncThunk(
 	'todo/fetchTodoThunk',
-	async function (_, { rejectWithValue, dispatch }) {
+	async function (_, {rejectWithValue, dispatch}) {
 		try {
 			const response = await fetch(`${url}/todos`);
 			if (!response.ok) throw new Error(`Error with status ${response.status}`);
@@ -13,11 +13,11 @@ export const fetchTodoThunk = createAsyncThunk(
 		} catch (error) {
 			return rejectWithValue(error.message);
 		}
-	}
+	},
 );
 export const addTodoThunk = createAsyncThunk(
 	'todo/addTodoThunk',
-	async function (title, { rejectWithValue, dispatch }) {
+	async function (title, {rejectWithValue, dispatch}) {
 		try {
 			const response = await fetch(`${url}/todos`, {
 				method: 'POST',
@@ -35,25 +35,26 @@ export const addTodoThunk = createAsyncThunk(
 		} catch (error) {
 			return rejectWithValue(error.message);
 		}
-	}
+	},
 );
 export const removeTodoThunk = createAsyncThunk(
 	'todo/removeTodoThunk',
-	async function (id, { rejectWithValue, dispatch }) {
+	async function (id, {rejectWithValue, dispatch}) {
 		try {
-			const response = await fetch(`${url}/todos/${id}`, { method: 'DELETE' });
-			if (!response.ok) throw new Error();
+			const response = await fetch(`${url}/todos/${id}`, {method: 'DELETE'});
+			if (!response.ok) throw new Error(`Error while removing with status: ${response.status}`);
+			dispatch(removeTodo({id}));
+			return (id);
 		} catch (error) {
-			return rejectWithValue(error.message);
+			return rejectWithValue({id, error: error.message});
 		}
-	}
+	},
 );
 
 export const todoSlice = createSlice({
 	name: 'todo',
 	initialState: {
 		todos: [],
-		nextId: 1,
 		fetchStatus: {
 			status: 'ok',
 			error: null,
@@ -62,6 +63,7 @@ export const todoSlice = createSlice({
 			status: 'ok',
 			error: null,
 		},
+		itemsStatus: {},
 	},
 	reducers: {
 		fetchTodo(state, action) {
@@ -113,9 +115,39 @@ export const todoSlice = createSlice({
 				error: action.payload,
 			};
 		},
+
+		[removeTodoThunk.pending]: (state, action) => {
+			state.itemsStatus = {
+				...state.itemsStatus,
+				// returns id
+				[action.meta.arg]: {
+					status: 'loading',
+					error: null,
+				},
+			}
+		},
+		[removeTodoThunk.fulfilled]: (state, action) => {
+			console.log('fulfilled', action.payload)
+			state.itemsStatus = {
+				...state.itemsStatus,
+				[action.payload]: {
+					status: 'ok',
+					error: null,
+				},
+			}
+		},
+		[removeTodoThunk.rejected]: (state, action) => {
+			state.itemsStatus = {
+				...state.itemsStatus,
+				[action.payload.id]: {
+					status: 'error',
+					error: action.payload.error,
+				},
+			}
+		},
 	},
 });
 
-export const { fetchTodo, addTodo, removeTodo } = todoSlice.actions;
+export const {fetchTodo, addTodo, removeTodo} = todoSlice.actions;
 
 export default todoSlice.reducer;
